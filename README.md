@@ -43,7 +43,7 @@ Commands:
    - /blood setdragon : Sets a non-movable and silent dragon. (Required for the "Blood")
    - /blood spawnblood : Simulates a blood spill for testing or other purposes.
    - /blood respawndragon : In the event the dragon despawns, this would respawn it to its last location. Must be in same world the dragon should be!
-   - /blood setxp [player] : Sets amount of blood XP a player has.
+   - /blood setxp [player] [amount] : Sets amount of blood XP a player has.
    - /blood clearxp [player] : Sets amount of blood XP a player has to 0.
   
 
