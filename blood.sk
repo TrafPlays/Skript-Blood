@@ -1,12 +1,11 @@
 #===============Main Config===============
 options:                                
-    world:"World"            
+    world:"World"      
     bloodduration:"70" #100 = 5 seconds
     bloodradius:"3"
     msgprefix: "&7[&9&lJC&7]"
+    cooldown:3 #seconds
 #=========================================
-
-#Only edit below if you know what you are doing!
 
 #==================================Blood Spawner==================================
 on death:
@@ -18,19 +17,30 @@ on death:
 #==================================================================================
 
 #=================================Blood Collection=================================
-on right click:
+on right click holding glass bottle:
     if player is in world {@world}:
-        wait 0.5 second
-        if player's held item is dragon's breath:
-            remove 1 of player's held item from player's inventory
-            if {blood::*} contains player:
-                add 1 to {blood::%player%}
-                send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
-            else:
-                add player to {blood::*}
-                set {blood::%player%} to 1
-                send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
+        if target of player is not a player:
+            if "%target%" contains "area effect cloud":
+                if {bloodcooldown::*} contains player:
+                    set {_cooldown} to {@cooldown}
+                    cancel event
+                    send "%{@msgprefix}% &cThere is a %{_cooldown}% second collection cooldown!" to player
+                    stop
+                cancel event
+                remove 1 of player's held item from player's inventory
+                if {blood::*} contains player:
+                    add 1 to {blood::%player%}
+                    send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
+                    add player to {bloodcooldown::*}
+                else:
+                    add player to {blood::*}
+                    set {blood::%player%} to 1
+                    send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
+                    add player to {bloodcooldown::*}
+                wait {@cooldown} seconds
+                remove player from {bloodcooldown::*}
 #====================================================================================
+
 
 command /blood [<text>] [<text>] [<int>]:
     trigger:
@@ -43,30 +53,13 @@ command /blood [<text>] [<text>] [<int>]:
                 send "&4&l---OP Commands---" to player
                 send "&e/blood setxp" to player
                 send "&e/blood clearxp" to player
-                send "&e/blood setdragon" to player
                 send "&e/blood spawnblood" to player
-                send "&e/blood respawndragon" to player
-        else if arg 1 is "Setdragon":   #==================================================>Spawns a non movable, no sound dragon. REQUIRED for blood collection. Summons dragon where op stands. NOTE: commands like /killall mobs can remove the dragon.
-            if player does not have permission "op":
-                send "%{@msgprefix}% &cYou don't have permission to use this!" to player
-                stop
-            make player execute command "summon ender_dragon ~ ~ ~ {NoAI:1,Silent:1,UUID:[I;0,0,0,0]}"
-            set {_xpos} to player's x-coordinate
-            set {_ypos} to player's y-coordinate
-            set {_zpos} to player's z-coordinate
-            set {blooddragonloc} to "%{_xpos}% %{_ypos}% %{_zpos}%"
         else if arg 1 is "spawnblood": #================================================> force spawns blood for testing or other purposes. Summons where op stands.
             if player does not have permission "op":
                 send "%{@msgprefix}% &cYou don't have permission to use this!" to player
                 stop
             make console execute command "execute at %player% run summon minecraft:area_effect_cloud ~ ~ ~ {Duration:%{@bloodduration}%,Radius:%{@bloodradius}%f,Owner:[I;0,0,0,0]}"
             send "%{@msgprefix}% &eSuccessfully spawned blood!" to player
-        else if arg 1 is "respawndragon": #===================================================> in the event the dragon gets deleted, be in the same world the dragon should be in and use this.
-            if player does not have permission "op":
-                send "%{@msgprefix}% &cYou don't have permission to use this!" to player
-                stop
-            make console execute command "execute at %player% run summon ender_dragon {blooddragonloc} {NoAI:1,Silent:1,UUID:[I;0,0,0,0]}"
-            send "%{@msgprefix}% &eDragon respawned @ %{blood::dragonloc}%" to player
         else if arg 1 is "setxp": #===================================================> change a player's blood xp
             if player does not have permission "op":
                 send "%{@msgprefix}% &cYou don't have permission to use this!" to player
@@ -94,16 +87,19 @@ command /blood [<text>] [<text>] [<int>]:
             send "%{@msgprefix}% &eYou successfully cleared &a%{_p}%'s &eBlood XP!" to player
         else if arg 1 is "leaderboard": #=================================================> view top blood xp holders
             loop {blood::*}:
-                add 1 to {_size}
-                if {_low.to.high.list::%loop-value%} is not set:
-                    set {_low.to.high.list::%loop-value%} to loop-index
+                if loop-value contains "dragonloc":
+                    set {_donothing} to 1
                 else:
-                    set {_n} to 0
-                    loop {_size} times:
-                        set {_n} to {_n}+1
-                        {_low.to.high.list::%loop-value-1%.%{_n}%} is not set
-                        set {_low.to.high.list::%loop-value-1%.%{_n}%} to loop-index
-                        stop loop
+                    add 1 to {_size}
+                    if {_low.to.high.list::%loop-value%} is not set:
+                        set {_low.to.high.list::%loop-value%} to loop-index
+                    else:
+                        set {_n} to 0
+                        loop {_size} times:
+                            set {_n} to {_n}+1
+                            {_low.to.high.list::%loop-value-1%.%{_n}%} is not set
+                            set {_low.to.high.list::%loop-value-1%.%{_n}%} to loop-index
+                            stop loop
             wait 1 tick
             set {_n} to size of {_low.to.high.list::*}
             loop {_low.to.high.list::*}:
@@ -113,7 +109,7 @@ command /blood [<text>] [<text>] [<int>]:
             send "&7 "
             send "&6&lTop 10 Blood Levels"
             loop {_high.to.low.list::*}:
-                if loop-value is "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" or "10":
+                else if loop-value is "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" or "10":
                     set {_donothing} to 1
                 else:
                     add 1 to {_result}
@@ -130,32 +126,32 @@ command /blood [<text>] [<text>] [<int>]:
                 send "%{@msgprefix}% &cUsage: /blood redeem [redeemable]" to player
                 send "" to player
                 send "&eRedeemables:" to player
-                send "&asharp - Enchants a held sword with sharpness 8! (&cRequires 20 Blood XP&a)" to player
-                send "&aefficiency - Enchants a held pickaxe with efficiency 10! (&cRequires 20 Blood XP&a)" to player
-                send "&amoney - Receive $1,000,000! (&cRequires 10 Blood XP&a)" to player
+                send "&asharp - Enchants a held sword with sharpness 8! (&cRequires 30 Blood XP&a)" to player
+                send "&aefficiency - Enchants a held pickaxe with efficiency 30! (&cRequires 20 Blood XP&a)" to player
+                send "&amoney - Receive $1,000,000! (&cRequires 20 Blood XP&a)" to player
             else if arg 2 is "sharp":
                 if player's held item is sword:
-                    if {blood::%player%} is more than 19:
+                    if {blood::%player%} is more than 29:
                         enchant player's held item with sharpness 8
-                        subtract 20 from {blood::%player%}
-                        send "%{@msgprefix}% &aYou've redeemed 20 Blood XP for Sharp 8 enchantment!'" to player
+                        subtract 30 from {blood::%player%}
+                        send "%{@msgprefix}% &aYou've redeemed 30 Blood XP for Sharp 8 enchantment!'" to player
                     else:
                         send "%{@msgprefix}% &cYou don't have enough Blood XP to use this!!" to player
                 else:
                     send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
             else if arg 2 is "money":
-                if {blood::%player%} is more than 9:
-                    subtract 10 from {blood::%player%}
+                if {blood::%player%} is more than 19:
+                    subtract 20 from {blood::%player%}
                     add 1000000 to balance of player
-                    send "%{@msgprefix}% &aYou've redeemed 10 Blood XP for $1,000,000!'" to player
+                    send "%{@msgprefix}% &aYou've redeemed 20 Blood XP for $1,000,000!'" to player
                 else:
                     send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
             else if arg 2 is "efficiency":
                 if player's held item is pickaxe:
-                    if {blood::%player%} is more than 19:
+                    if {blood::%player%} is more than 29:
                         enchant player's held item with efficiency 10
-                        subtract 20 from {blood::%player%}
-                        send "%{@msgprefix}% &aYou've redeemed 20 Blood XP for Efficiency 10 enchantment!'" to player
+                        subtract 30 from {blood::%player%}
+                        send "%{@msgprefix}% &aYou've redeemed 30 Blood XP for Efficiency 10 enchantment!'" to player
                     else:
                         send "%{@msgprefix}% &cYou don't have enough Blood XP to use this!!" to player
                 else:
