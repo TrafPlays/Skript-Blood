@@ -1,3 +1,8 @@
+################ Blood XP v1.1 ################
+################### By Traf ###################
+#git: https://github.com/jayyyb123/Skript-Blood
+#spigot: https://www.spigotmc.org/resources/skript-blood-xp.101267/
+
 #===============Main Config===============
 options:                                
     world:"World"      
