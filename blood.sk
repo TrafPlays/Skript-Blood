@@ -1,29 +1,70 @@
-################ Blood XP v1.1 ################
-################### By Traf ###################
-#git: https://github.com/jayyyb123/Skript-Blood
-#spigot: https://www.spigotmc.org/resources/skript-blood-xp.101267/
+#=============================================================================
+#= Author: Traf                                                             ==
+#= Skript Version: 1.2                                                      ==
+#= Skript Optional Dependencies: Essentials, LuckPerms, HPET                ==
+#= Server Tested On: play.jailcraftmc.net                                   ==
+#= Minecraft Version: 1.9 - 1.18                                            ==
+#= Tested Minecraft Versions: 1.16, 1.17, 1.18                              ==
+#=============================================================================
 
-#===============Main Config===============
+#==================================Main Config==================================
 options:                                
-    world:"World"      
-    bloodduration:"70" #100 = 5 seconds
-    bloodradius:"3"
-    msgprefix: "&7[&9&lJC&7]"
-    cooldown:3 #seconds
-#=========================================
+    world:"world"                                      #world to allow blood spill in. Only works if oneworld is true
+    oneworld: true                                     #allows blood to be spilled in only the world defined above      
+    bloodduration:"70"                                 #100 = 5 seconds
+    bloodradius:"3"                                    #block radius of blood spill
+    msgprefix: "&7[&9&lJC&7]"                          #all messages in this skript to start with
+    cooldown:3                                         #seconds
+    animals: false                                     #allows animals to spill blood as well
+#=================================================================================
 
 #==================================Blood Spawner==================================
 on death:
-    if victim is in world {@world}:
+    if {@oneworld} is true:
+        if victim is in world {@world}:
+            if {@animals} is false:
+                if victim is not player:
+                    stop
+            set {_rand} to a random integer between 1 and 10
+            if {_rand} is 10:
+                make console execute command "execute at %victim% run summon minecraft:area_effect_cloud ~ ~ ~ {Duration:%{@bloodduration}%,Radius:%{@bloodradius}%f,Owner:[I;0,0,0,0]}"
+                make console execute command "announce %{@msgprefix}% &a%victim%'s &eblood just spilled!"
+    else:
+        if {@animals} is false:
+            if victim is not player:
+                stop
         set {_rand} to a random integer between 1 and 10
         if {_rand} is 10:
             make console execute command "execute at %victim% run summon minecraft:area_effect_cloud ~ ~ ~ {Duration:%{@bloodduration}%,Radius:%{@bloodradius}%f,Owner:[I;0,0,0,0]}"
             make console execute command "announce %{@msgprefix}% &a%victim%'s &eblood just spilled!"
+
 #==================================================================================
 
 #=================================Blood Collection=================================
 on right click holding glass bottle:
-    if player is in world {@world}:
+    if {@oneworld} is true:
+        if player is in world {@world}:
+            if target of player is not a player:
+                if "%target%" contains "area effect cloud":
+                    if {bloodcooldown::*} contains player:
+                        set {_cooldown} to {@cooldown}
+                        cancel event
+                        send "%{@msgprefix}% &cThere is a %{_cooldown}% second collection cooldown!" to player
+                        stop
+                    cancel event
+                    remove 1 of player's held item from player's inventory
+                    if {blood::*} contains player:
+                        add 1 to {blood::%player%}
+                        send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
+                        add player to {bloodcooldown::*}
+                    else:
+                        add player to {blood::*}
+                        set {blood::%player%} to 1
+                        send "%{@msgprefix}% &eYou've collected &a%{blood::%player%}%&e blood levels!" to player
+                        add player to {bloodcooldown::*}
+                    wait {@cooldown} seconds
+                    remove player from {bloodcooldown::*}
+    else:
         if target of player is not a player:
             if "%target%" contains "area effect cloud":
                 if {bloodcooldown::*} contains player:
@@ -45,6 +86,7 @@ on right click holding glass bottle:
                 wait {@cooldown} seconds
                 remove player from {bloodcooldown::*}
 #====================================================================================
+
 
 
 command /blood [<text>] [<text>] [<int>]:
@@ -114,7 +156,7 @@ command /blood [<text>] [<text>] [<int>]:
             send "&7 "
             send "&6&lTop 10 Blood Levels"
             loop {_high.to.low.list::*}:
-                else if loop-value is "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" or "10":
+                if loop-value is "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" or "10":
                     set {_donothing} to 1
                 else:
                     add 1 to {_result}
@@ -132,8 +174,11 @@ command /blood [<text>] [<text>] [<int>]:
                 send "" to player
                 send "&eRedeemables:" to player
                 send "&asharp - Enchants a held sword with sharpness 8! (&cRequires 30 Blood XP&a)" to player
-                send "&aefficiency - Enchants a held pickaxe with efficiency 30! (&cRequires 20 Blood XP&a)" to player
+                send "&aefficiency - Enchants a held pickaxe with efficiency 10! (&cRequires 30 Blood XP&a)" to player
                 send "&amoney - Receive $1,000,000! (&cRequires 20 Blood XP&a)" to player
+                send "&asheep - Receive a sheep pet usable in /pet (&cRequires 40 Blood XP&a)" to player
+                send "&adonator - Receive a Prisoner Donator Rank for 30 days (&cRequires 100 Blood XP&a)" to player
+            #==========================================================================================================> Sharp enchant example using essentials
             else if arg 2 is "sharp":
                 if player's held item is sword:
                     if {blood::%player%} is more than 29:
@@ -144,6 +189,7 @@ command /blood [<text>] [<text>] [<int>]:
                         send "%{@msgprefix}% &cYou don't have enough Blood XP to use this!!" to player
                 else:
                     send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
+            #============================================================================================================> money example using essentials
             else if arg 2 is "money":
                 if {blood::%player%} is more than 19:
                     subtract 20 from {blood::%player%}
@@ -151,6 +197,7 @@ command /blood [<text>] [<text>] [<int>]:
                     send "%{@msgprefix}% &aYou've redeemed 20 Blood XP for $1,000,000!'" to player
                 else:
                     send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
+            #============================================================================================================> Efficiency enchant example using essentials
             else if arg 2 is "efficiency":
                 if player's held item is pickaxe:
                     if {blood::%player%} is more than 29:
@@ -161,6 +208,22 @@ command /blood [<text>] [<text>] [<int>]:
                         send "%{@msgprefix}% &cYou don't have enough Blood XP to use this!!" to player
                 else:
                     send "%{@msgprefix}% &cYou must be holding a pickaxe to use this!" to player
+            #=============================================================================================================> Give player a pet using HPET
+            else if arg 2 is "sheep":
+                if {blood::%player%} is more than 39:
+                    subtract 40 from {blood::%player%}
+                    make console execute command "lp user %player% permission set pet.use.sheep"
+                    send "%{@msgprefix}% &aYou've redeemed 40 Blood XP for a sheep pet! Use it in /pet'" to player
+                else:
+                    send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
+            #=============================================================================================================> Give player a temporary rank (in this example its a donator rank)
+            else if arg 2 is "donator":
+                if {blood::%player%} is more than 99:
+                    subtract 100 from {blood::%player%}
+                    make console execute command "lp user %player% group addtemp prisoner 30d"
+                    send "%{@msgprefix}% &aYou've redeemed 100 Blood XP for the Prisoner Donator Rank for 30 days!'" to player
+                else:
+                    send "%{@msgprefix}% &cYou must be holding a sword to use this!" to player
             else:
                 send "%{@msgprefix}% &cInvalid Option!" to player
         else:
