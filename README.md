@@ -1,5 +1,5 @@
 # Skript-Blood
-[Skript] Blood XP v1.1
+[Skript] Blood XP v1.2
 
 Requirements:
 - Skript
